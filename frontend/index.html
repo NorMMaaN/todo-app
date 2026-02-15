@@ -3,178 +3,61 @@
 <head>
     <title>Мои задачи</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: #f5f5f5;
-        }
-        .container {
-            background-color: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        }
-        h1 {
-            text-align: center;
-            color: #333;
-        }
-        .add-task {
-            display: flex;
-            margin-bottom: 20px;
-        }
-        .add-task input {
-            flex: 1;
-            padding: 10px;
-            font-size: 16px;
-            border: 1px solid #ddd;
-            border-radius: 5px 0 0 5px;
-        }
-        .add-task button {
-            padding: 10px 20px;
-            background-color: #28a745;
-            color: white;
-            border: none;
-            border-radius: 0 5px 5px 0;
-            cursor: pointer;
-        }
-        .task-item {
-            display: flex;
-            align-items: center;
-            padding: 10px;
-            border-bottom: 1px solid #eee;
-        }
-        .task-item.completed {
-            background-color: #e8f5e9;
-        }
-        .task-title {
-            flex: 1;
-            margin-left: 10px;
-        }
-        .task-title.completed {
-            text-decoration: line-through;
-            color: #999;
-        }
-        .delete-btn {
-            background-color: #dc3545;
-            color: white;
-            border: none;
-            padding: 5px 10px;
-            border-radius: 3px;
-            cursor: pointer;
-        }
-        .checkbox {
-            width: 20px;
-            height: 20px;
-            cursor: pointer;
-        }
+        body { font-family: Arial; max-width: 500px; margin: 0 auto; padding: 20px; }
+        .task { padding: 10px; border-bottom: 1px solid #ccc; }
+        button { background: #4CAF50; color: white; border: none; padding: 10px; cursor: pointer; }
+        input { padding: 10px; width: 70%; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>📝 Список задач</h1>
-        
-        <!-- Форма добавления задачи -->
-        <div class="add-task">
-            <input type="text" id="taskInput" placeholder="Что нужно сделать?">
-            <button onclick="addTask()">Добавить</button>
-        </div>
-        
-        <!-- Список задач -->
-        <div id="tasksList"></div>
+    <h1>Мои задачи</h1>
+    
+    <div>
+        <input id="taskInput" placeholder="Новая задача">
+        <button onclick="addTask()">Добавить</button>
     </div>
+    
+    <div id="tasks"></div>
 
     <script>
-        // Адрес нашего сервера
-        const API_URL = 'http://localhost:5000/api';
-        
-        // Загружаем задачи при открытии страницы
-        loadTasks();
-        
-        // Функция загрузки задач
+        // Простой код без ошибок
         async function loadTasks() {
-            try {
-                const response = await fetch(`${API_URL}/tasks`);
-                const tasks = await response.json();
-                displayTasks(tasks);
-            } catch (error) {
-                console.error('Ошибка загрузки:', error);
-            }
-        }
-        
-        // Функция отображения задач
-        function displayTasks(tasks) {
-            const list = document.getElementById('tasksList');
+            let res = await fetch('http://127.0.0.1:5000/api/tasks');
+            let tasks = await res.json();
             
-            if (tasks.length === 0) {
-                list.innerHTML = '<p style="text-align: center; color: #999;">Задач пока нет</p>';
-                return;
+            let html = '';
+            for (let task of tasks) {
+                html += `<div class="task">
+                    ${task.title} 
+                    <button onclick="deleteTask(${task.id})">✕</button>
+                </div>`;
             }
-            
-            list.innerHTML = tasks.map(task => `
-                <div class="task-item ${task.completed ? 'completed' : ''}" id="task-${task.id}">
-                    <input type="checkbox" class="checkbox" 
-                           ${task.completed ? 'checked' : ''} 
-                           onchange="toggleTask(${task.id}, this.checked)">
-                    <span class="task-title ${task.completed ? 'completed' : ''}">
-                        ${task.title}
-                    </span>
-                    <button class="delete-btn" onclick="deleteTask(${task.id})">✕</button>
-                </div>
-            `).join('');
+            document.getElementById('tasks').innerHTML = html || 'Нет задач';
         }
-        
-        // Функция добавления задачи
+
         async function addTask() {
-            const input = document.getElementById('taskInput');
-            const title = input.value.trim();
-            
+            let title = document.getElementById('taskInput').value;
             if (!title) return;
             
-            try {
-                const response = await fetch(`${API_URL}/tasks`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({title: title})
-                });
-                
-                if (response.ok) {
-                    input.value = '';
-                    loadTasks();
-                }
-            } catch (error) {
-                console.error('Ошибка добавления:', error);
-            }
-        }
-        
-        // Функция переключения статуса задачи
-        async function toggleTask(id, completed) {
-            try {
-                await fetch(`${API_URL}/tasks/${id}`, {
-                    method: 'PUT',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({completed: completed})
-                });
-                loadTasks();
-            } catch (error) {
-                console.error('Ошибка обновления:', error);
-            }
-        }
-        
-        // Функция удаления задачи
-        async function deleteTask(id) {
-            if (!confirm('Удалить задачу?')) return;
+            await fetch('http://127.0.0.1:5000/api/tasks', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({title: title})
+            });
             
-            try {
-                await fetch(`${API_URL}/tasks/${id}`, {
-                    method: 'DELETE'
-                });
-                loadTasks();
-            } catch (error) {
-                console.error('Ошибка удаления:', error);
-            }
+            document.getElementById('taskInput').value = '';
+            loadTasks();
         }
+
+        async function deleteTask(id) {
+            await fetch('http://127.0.0.1:5000/api/tasks/' + id, {
+                method: 'DELETE'
+            });
+            loadTasks();
+        }
+
+        // Загрузить задачи при открытии страницы
+        loadTasks();
     </script>
 </body>
 </html>
