@@ -2,13 +2,20 @@ from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 from datetime import datetime
+import os  # Добавляем импорт os для работы с переменными окружения
 
 # Создаём приложение
 app = Flask(__name__)
 CORS(app)  # Разрешаем запросы с других сайтов
 
 # Настраиваем базу данных
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///tasks.db'
+# Используем Railway PostgreSQL, если есть, иначе SQLite
+database_url = os.environ.get('DATABASE_URL', 'sqlite:///tasks.db')
+# Railway передает DATABASE_URL с префиксом postgres://, но SQLAlchemy требует postgresql://
+if database_url and database_url.startswith('postgres://'):
+    database_url = database_url.replace('postgres://', 'postgresql://', 1)
+
+app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
@@ -71,6 +78,12 @@ def update_task(task_id):
     db.session.commit()
     return jsonify(task.to_dict())
 
-# Запуск приложения
+# Маршрут для проверки здоровья (для Railway)
+@app.route('/health')
+def health():
+    return 'OK', 200
+
+# Запуск приложения - ИСПРАВЛЕНО для Railway
 if __name__ == '__main__':
-    app.run(debug=True, host='127.0.0.1', port=5000)
+    port = int(os.environ.get('PORT', 5000))  # Берём порт из переменной окружения
+    app.run(debug=False, host='0.0.0.0', port=port)  # Слушаем все интерфейсы
